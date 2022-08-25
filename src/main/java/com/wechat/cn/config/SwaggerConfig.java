@@ -32,7 +32,7 @@ public class SwaggerConfig {
     public ApiInfo apiInfo(){
         return new ApiInfoBuilder()
                 .version("1.0")
-                .title("backgroundSystem")
+                .title("Wechat")
 //                .contact(new Contact("admin","url","xxx"))
                 .build();
     }
