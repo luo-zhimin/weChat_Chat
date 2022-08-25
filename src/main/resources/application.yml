@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: weChat
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 2020.0.l
+    url: jdbc:mysql://localhost/backgroundSystem?rewriteBatchedStatements=true&useSSL=false&zeroDateTimeBehavior=convertToNull&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+  redis:
+#有则配置无则空
+    password:
+    host: 127.0.0.1
+    port: 6379
+server:
+  port: 8888
+
