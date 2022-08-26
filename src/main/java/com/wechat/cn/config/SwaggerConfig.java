@@ -25,7 +25,7 @@ public class SwaggerConfig {
         return new Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(apiInfo()).enable(true)
                 .select()
-                .apis(RequestHandlerSelectors.basePackage("com.background.system.controller"))
+                .apis(RequestHandlerSelectors.basePackage("com.wechat.cn.controller"))
                 .build();
     }
 
