@@ -1,5 +1,7 @@
 package com.wechat.cn.service;
 
+import com.wechat.cn.response.Login;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -15,5 +17,5 @@ public interface WechatService {
 
     void verifyPost(HttpServletRequest request, HttpServletResponse response);
 
-    Object wxScanLogin(String sceneStr);
+    Login wxScanLogin(String sceneStr);
 }

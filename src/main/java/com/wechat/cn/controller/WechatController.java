@@ -43,7 +43,7 @@ public class WechatController {
 
     @ApiOperation(value = "用户扫码登录--临时二维码")
     @GetMapping("/wxScanLogin")
-    public Result<?> wxScanLogin(@RequestParam(value = "scene_str",defaultValue = "") String sceneStr) {
+    public Result<?> wxScanLogin(@RequestParam(value = "scene",defaultValue = "") String sceneStr) {
         return Result.success(wechatService.wxScanLogin(sceneStr));
     }
 }

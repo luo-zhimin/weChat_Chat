@@ -124,7 +124,11 @@
   </select>
 
   <update id="updateUserInfoByOpenId">
-    update wechat_user set user_info = #{userInfo} where open_id=#{openId}
+    update wechat_user set user_info = #{userInfo}
+    <if test="unionId != null and unionId != ''">
+      ,union_id=#{unionId}
+    </if>
+    where open_id=#{openId}
   </update>
 
 </mapper>

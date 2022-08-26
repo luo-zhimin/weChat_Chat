@@ -74,6 +74,7 @@ public class WechatServiceImpl extends BaseService implements WechatService {
                 scene_id	场景值ID，临时二维码时为32位非0整型，永久二维码时最大值为100000（目前参数只支持1--100000）
                 scene_str	场景值ID（字符串形式的ID），字符串类型，长度限制为1到64
          */
+
         String ticketParam = "{\"expire_seconds\": 3000, \"action_name\": \"QR_STR_SCENE\", \"action_info\": {\"scene\": {\"scene_str\": \"" + scene_str + "\"}}}";
         String ticketStr = doPost(ticketUrl,ticketParam);
         @SuppressWarnings({"all"})
@@ -126,31 +127,7 @@ public class WechatServiceImpl extends BaseService implements WechatService {
             String event = map.get("EventKey");
             logger.info("event:"+event+"-openId:"+openId);
             if (StringUtils.isNotEmpty(event)) {
-                if (event.contains("userName")) {
-                    //创建用户
-                    User user = User.builder()
-                            .name(RandomStringUtils.random(10))
-                            .password(RandomStringUtils.random(10))
-                            .isDelete(Boolean.FALSE)
-                            .createTime(LocalDateTime.now())
-                            .build();
-                    userMapper.insertSelective(user);
-
-                    WechatUser wechatUser = WechatUser.builder()
-                            .relationId(user.getId())
-                            .openId(openId)
-                            .isDel(Boolean.FALSE)
-                            .userType(0)
-                            .createTime(LocalDateTime.now())
-                            .build();
-                    this.wechatUserMapper.insertSelective(wechatUser);
-                    map.put("alert", "绑定成功");
-                } else if (event.contains("byName")) {
-                    String username = event.replace("byName.", "");
-                    redisTemplate.opsForValue().set(username, openId);
-                    redisTemplate.expire(username, 3000, TimeUnit.SECONDS);
-                    map.put("alert", "绑定成功");
-                } else if (event.contains("perFei")) {
+                if (event.contains("perFei")) {
                     // 登錄
                     // redis把event 和 openId存储起来
                     redisTemplate.opsForValue().set(event, openId);
@@ -160,7 +137,25 @@ public class WechatServiceImpl extends BaseService implements WechatService {
                     if (live) {
                         map.put("alert", "登录成功");
                     } else {
-                        map.put("alert", "账号未绑定");
+                        //创建用户
+                        User user = User.builder()
+                                .userName(RandomStringUtils.randomNumeric(10))
+                                .password(RandomStringUtils.randomNumeric(10))
+                                .isDelete(Boolean.FALSE)
+                                .createTime(LocalDateTime.now())
+                                .build();
+                        userMapper.insertSelective(user);
+
+                        WechatUser wechatUser = WechatUser.builder()
+                                .relationId(user.getId())
+                                .openId(openId)
+                                .isDel(Boolean.FALSE)
+                                .userType(0)
+                                .createTime(LocalDateTime.now())
+                                .build();
+                        this.wechatUserMapper.insertSelective(wechatUser);
+                        map.put("alert", "绑定成功");
+//                        map.put("alert", "账号未绑定");
                     }
                 }
             }
@@ -168,8 +163,9 @@ public class WechatServiceImpl extends BaseService implements WechatService {
             if (StringUtils.isNotEmpty(openId)){
                 //获取公众号的用户信息
                 String weChatUserInfo = this.accessTokenService.getWeChatUserInfo(openId);
-                logger.info("保存用户个人信息 [{}]",JSONObject.parseObject(weChatUserInfo));
-                this.wechatUserMapper.updateUserInfoByOpenId(openId,weChatUserInfo);
+                JSONObject jsonObject = JSONObject.parseObject(weChatUserInfo);
+                logger.info("保存用户个人信息 [{}]",jsonObject);
+                this.wechatUserMapper.updateUserInfoByOpenId(openId,jsonObject.get("unionid")+"",weChatUserInfo);
             }
             //根据消息类型 构造返回消息
             result = MessageUtil.buildXml(map);
@@ -184,7 +180,7 @@ public class WechatServiceImpl extends BaseService implements WechatService {
     }
 
     @Override
-    public Object wxScanLogin(String sceneStr) {
+    public Login wxScanLogin(String sceneStr) {
 
         String openId = redisTemplate.opsForValue().get(sceneStr);
         if (StringUtils.isEmpty(openId)){

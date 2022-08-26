@@ -12,6 +12,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 /**
  * Created by IntelliJ IDEA.
+ * swagger 配置
  * @Author : 志敏.罗
  * @create 2022/8/17 16:25
  */

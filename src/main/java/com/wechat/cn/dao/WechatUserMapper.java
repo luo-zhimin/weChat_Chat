@@ -23,5 +23,7 @@ public interface WechatUserMapper {
 
     boolean hasLiveByOpenId(@Param("openId")String openId);
 
-    void updateUserInfoByOpenId(@Param("openId") String openId, @Param("userInfo") String weChatUserInfo);
+    void updateUserInfoByOpenId(@Param("openId") String openId,
+                                @Param("unionId") String unionId,
+                                @Param("userInfo") String weChatUserInfo);
 }
