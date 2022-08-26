@@ -1,34 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.wechat.cn.dao.WechatUserMapper">
+
   <resultMap id="BaseResultMap" type="com.wechat.cn.entry.WechatUser">
     <!--@Table wechat_user-->
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="open_id" jdbcType="VARCHAR" property="openId" />
     <result column="union_id" jdbcType="VARCHAR" property="unionId" />
     <result column="user_info" jdbcType="VARCHAR" property="userInfo" />
+    <result column="user_type" jdbcType="INTEGER" property="userType" />
+    <result column="relation_id" jdbcType="BIGINT" property="relationId" />
     <result column="is_del" jdbcType="INTEGER" property="isDel" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
   </resultMap>
+
   <sql id="Base_Column_List">
-    id, open_id, union_id, user_info, is_del, create_time
+    id, open_id, union_id, user_info,user_type, relation_id, is_del, create_time
   </sql>
+
   <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
     select 
     <include refid="Base_Column_List" />
     from wechat_user
     where id = #{id,jdbcType=BIGINT}
   </select>
+
   <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from wechat_user
     where id = #{id,jdbcType=BIGINT}
   </delete>
+
   <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.wechat.cn.entry.WechatUser" useGeneratedKeys="true">
     insert into wechat_user (open_id, union_id, user_info, 
       is_del, create_time)
     values (#{openId,jdbcType=VARCHAR}, #{unionId,jdbcType=VARCHAR}, #{userInfo,jdbcType=VARCHAR}, 
       #{isDel,jdbcType=INTEGER}, #{createTime,jdbcType=TIMESTAMP})
   </insert>
+
   <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.wechat.cn.entry.WechatUser" useGeneratedKeys="true">
     insert into wechat_user
     <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -40,6 +48,12 @@
       </if>
       <if test="userInfo != null and userInfo != ''">
         user_info,
+      </if>
+      <if test="userType != null">
+        user_type,
+      </if>
+      <if test="relationId != null">
+        relation_id,
       </if>
       <if test="isDel != null">
         is_del,
@@ -58,6 +72,12 @@
       <if test="userInfo != null and userInfo != ''">
         #{userInfo,jdbcType=VARCHAR},
       </if>
+      <if test="userType != null">
+        #{userType,jdbcType=INTEGER},
+      </if>
+      <if test="relationId != null">
+        #{relationId,jdbcType=BIGINT},
+      </if>
       <if test="isDel != null">
         #{isDel,jdbcType=INTEGER},
       </if>
@@ -66,6 +86,7 @@
       </if>
     </trim>
   </insert>
+
   <update id="updateByPrimaryKeySelective" parameterType="com.wechat.cn.entry.WechatUser">
     update wechat_user
     <set>
@@ -87,6 +108,7 @@
     </set>
     where id = #{id,jdbcType=BIGINT}
   </update>
+
   <update id="updateByPrimaryKey" parameterType="com.wechat.cn.entry.WechatUser">
     update wechat_user
     set open_id = #{openId,jdbcType=VARCHAR},
@@ -96,4 +118,13 @@
       create_time = #{createTime,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=BIGINT}
   </update>
+
+  <select id="hasLiveByOpenId" resultType="boolean">
+    select count(*) from wechat_user where is_del = 0 and open_id=#{openId}
+  </select>
+
+  <update id="updateUserInfoByOpenId">
+    update wechat_user set user_info = #{userInfo} where open_id=#{openId}
+  </update>
+
 </mapper>

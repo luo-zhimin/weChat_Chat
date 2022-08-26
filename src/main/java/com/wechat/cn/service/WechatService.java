@@ -1,5 +1,8 @@
 package com.wechat.cn.service;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 /**
  * Created by IntelliJ IDEA.
  * @Author : 镜像
@@ -7,4 +10,10 @@ package com.wechat.cn.service;
  */
 public interface WechatService {
     String getLoginQCode();
+
+    void verifyGet(HttpServletRequest request, HttpServletResponse response);
+
+    void verifyPost(HttpServletRequest request, HttpServletResponse response);
+
+    Object wxScanLogin(String sceneStr);
 }

@@ -1,14 +1,36 @@
 package com.wechat.cn.service.impl;
 
+import com.alibaba.fastjson.JSONObject;
+import com.wechat.cn.dao.UserMapper;
+import com.wechat.cn.dao.WechatUserMapper;
+import com.wechat.cn.entry.User;
+import com.wechat.cn.entry.WechatUser;
+import com.wechat.cn.exception.ServiceException;
+import com.wechat.cn.response.Login;
+import com.wechat.cn.service.BaseService;
 import com.wechat.cn.service.WechatService;
 import com.wechat.cn.util.GsonUtil;
+import com.wechat.cn.util.MessageUtil;
+import com.wechat.cn.util.SHA1;
 import com.wechat.cn.wechat.WechatAccessTokenService;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static com.wechat.cn.util.HttpUtil.doPost;
 
@@ -19,13 +41,21 @@ import static com.wechat.cn.util.HttpUtil.doPost;
  */
 @Service
 @Slf4j
-public class WechatServiceImpl implements WechatService {
+public class WechatServiceImpl extends BaseService implements WechatService {
+
+    private static final Logger logger = LoggerFactory.getLogger(WechatServiceImpl.class);
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String,String> redisTemplate;
 
     @Autowired
     private WechatAccessTokenService accessTokenService;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private WechatUserMapper wechatUserMapper;
 
 
     @Override
@@ -46,7 +76,6 @@ public class WechatServiceImpl implements WechatService {
          */
         String ticketParam = "{\"expire_seconds\": 3000, \"action_name\": \"QR_STR_SCENE\", \"action_info\": {\"scene\": {\"scene_str\": \"" + scene_str + "\"}}}";
         String ticketStr = doPost(ticketUrl,ticketParam);
-        System.out.println(ticketStr);
         @SuppressWarnings({"all"})
         Map<String, String> ticketMap = GsonUtil.fromJson(ticketStr, Map.class);
         assert ticketMap != null;
@@ -54,5 +83,126 @@ public class WechatServiceImpl implements WechatService {
         return "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=" + ticket;
     }
 
+    @Override
+    public void verifyGet(HttpServletRequest request, HttpServletResponse response) {
+        String signature = request.getParameter("signature");
+        String timestamp = request.getParameter("timestamp");
+        String nonce = request.getParameter("nonce");
+        String echostr = request.getParameter("echostr");
+        //这里填基本配置中的token
+        String token = ConfigServiceImpl.configMap.get("token");
+        String p = SHA1.getSHA1(token, timestamp, nonce,"");
+        logger.info("加密:{}",p);
+        logger.info("本身:{}", signature);
+        PrintWriter out = null;
+        try {
+            out = response.getWriter();
+            if (p.equals(signature)){
+                logger.info("验证成功");
+                out.print(echostr);
+            }else {
+                logger.info("验证失败");
+            }
+        } catch (IOException e) {
+            logger.info("验证失败");
+            logger.error("", e);
+        }
+    }
 
+    @Override
+    @Transactional
+    @SneakyThrows
+    public void verifyPost(HttpServletRequest request, HttpServletResponse response) {
+        // 接收、处理、响应由微信服务器转发的用户发送给公众号的消息
+        // 将请求、响应的编码均设置为UTF-8（防止中文乱码）
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        String result = "";
+        try {
+            //获得解析微信发来的请求
+            Map<String,String> map = MessageUtil.parseXml(request);
+            // 通过openid获取用户信息
+            String openId = map.get("FromUserName");
+            String event = map.get("EventKey");
+            logger.info("event:"+event+"-openId:"+openId);
+            if (StringUtils.isNotEmpty(event)) {
+                if (event.contains("userName")) {
+                    //创建用户
+                    User user = User.builder()
+                            .name(RandomStringUtils.random(10))
+                            .password(RandomStringUtils.random(10))
+                            .isDelete(Boolean.FALSE)
+                            .createTime(LocalDateTime.now())
+                            .build();
+                    userMapper.insertSelective(user);
+
+                    WechatUser wechatUser = WechatUser.builder()
+                            .relationId(user.getId())
+                            .openId(openId)
+                            .isDel(Boolean.FALSE)
+                            .userType(0)
+                            .createTime(LocalDateTime.now())
+                            .build();
+                    this.wechatUserMapper.insertSelective(wechatUser);
+                    map.put("alert", "绑定成功");
+                } else if (event.contains("byName")) {
+                    String username = event.replace("byName.", "");
+                    redisTemplate.opsForValue().set(username, openId);
+                    redisTemplate.expire(username, 3000, TimeUnit.SECONDS);
+                    map.put("alert", "绑定成功");
+                } else if (event.contains("perFei")) {
+                    // 登錄
+                    // redis把event 和 openId存储起来
+                    redisTemplate.opsForValue().set(event, openId);
+                    redisTemplate.expire(event, 3000, TimeUnit.SECONDS);
+
+                    boolean live = wechatUserMapper.hasLiveByOpenId(openId);
+                    if (live) {
+                        map.put("alert", "登录成功");
+                    } else {
+                        map.put("alert", "账号未绑定");
+                    }
+                }
+            }
+
+            if (StringUtils.isNotEmpty(openId)){
+                //获取公众号的用户信息
+                String weChatUserInfo = this.accessTokenService.getWeChatUserInfo(openId);
+                logger.info("保存用户个人信息 [{}]",JSONObject.parseObject(weChatUserInfo));
+                this.wechatUserMapper.updateUserInfoByOpenId(openId,weChatUserInfo);
+            }
+            //根据消息类型 构造返回消息
+            result = MessageUtil.buildXml(map);
+            if(result.equals("")){
+                result = "未正确响应";
+            }
+        } catch (Exception e) {
+            logger.error("发生异常："+ e.getMessage());
+            e.printStackTrace();
+        }
+        response.getWriter().println(result);
+    }
+
+    @Override
+    public Object wxScanLogin(String sceneStr) {
+
+        String openId = redisTemplate.opsForValue().get(sceneStr);
+        if (StringUtils.isEmpty(openId)){
+            return null;
+        }
+
+        boolean live = wechatUserMapper.hasLiveByOpenId(openId);
+
+        if (!live){
+            throw new ServiceException(1000,"请绑定用户");
+        }
+
+        Login build = Login.builder()
+                .userName(openId)
+                .token(createToken(openId))
+                .build();
+
+        logger.info("企业用户扫码登录成功");
+        return build;
+    }
 }

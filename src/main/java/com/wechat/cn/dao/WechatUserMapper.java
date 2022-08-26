@@ -1,6 +1,7 @@
 package com.wechat.cn.dao;
 
 import com.wechat.cn.entry.WechatUser;
+import org.apache.ibatis.annotations.Param;
 
 /**
 * Created by IntelliJ IDEA.
@@ -19,4 +20,8 @@ public interface WechatUserMapper {
     int updateByPrimaryKeySelective(WechatUser record);
 
     int updateByPrimaryKey(WechatUser record);
+
+    boolean hasLiveByOpenId(@Param("openId")String openId);
+
+    void updateUserInfoByOpenId(@Param("openId") String openId, @Param("userInfo") String weChatUserInfo);
 }
