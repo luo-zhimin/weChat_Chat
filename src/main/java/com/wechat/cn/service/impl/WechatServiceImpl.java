@@ -64,6 +64,7 @@ public class WechatServiceImpl extends BaseService implements WechatService {
         //随机生成一个 scene_str 参数
         String scene_str = "perFei." + System.currentTimeMillis();
 
+        //todo 根据不同的 scene_str 生成不同的 二维码 处理不同的逻辑  微信回调 EventKey <==> scene_str
         String ticketUrl = String.format("https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s",accessToken);
 
         /*
@@ -127,6 +128,7 @@ public class WechatServiceImpl extends BaseService implements WechatService {
             String event = map.get("EventKey");
             logger.info("event:"+event+"-openId:"+openId);
             if (StringUtils.isNotEmpty(event)) {
+                //todo 后续拓展
                 if (event.contains("perFei")) {
                     // 登錄
                     // redis把event 和 openId存储起来
