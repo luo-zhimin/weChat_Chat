@@ -3,17 +3,12 @@ package com.wechat.cn.wechat;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.wechat.cn.service.impl.ConfigServiceImpl;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+
+import static com.wechat.cn.util.HttpUtil.doGet;
 
 /**
  * Created by IntelliJ IDEA.
@@ -28,7 +23,9 @@ public class WechatAccessTokenService {
 
     private volatile String weChatUserInfo;
 
-
+    /**
+     * @return 获取AccessToken
+     */
     public synchronized String getAccessToken() {
         getAccessTokenAndRefresh();
         return accessToken;
@@ -43,7 +40,11 @@ public class WechatAccessTokenService {
         getAccessTokenAndRefresh();
     }
 
-    //检查token是否在效期内
+    /**
+     * 检查token是否在效期内
+     * @param refreshTime 刷新时间
+     * @return 是否过期
+     */
     private boolean checkTokenValid(Date refreshTime) {
         Date now = new Date();
         return refreshTime.getTime() + 7000 * 1000 > now.getTime();
@@ -69,14 +70,5 @@ public class WechatAccessTokenService {
         String result = doGet(url);
         log.info("【公众号】获取关注的个人信息结果:{}", result);
         this.weChatUserInfo = result;
-    }
-
-    @SneakyThrows
-    private String doGet(String url){
-        HttpGet httpGet = new HttpGet(url);
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
-        HttpEntity entity = httpResponse.getEntity();
-        return EntityUtils.toString(entity);
     }
 }

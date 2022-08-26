@@ -1,29 +1,16 @@
 package com.wechat.cn.service.impl;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.google.gson.Gson;
 import com.wechat.cn.service.WechatService;
 import com.wechat.cn.util.GsonUtil;
 import com.wechat.cn.wechat.WechatAccessTokenService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.Map;
+
+import static com.wechat.cn.util.HttpUtil.doPost;
 
 /**
  * Created by IntelliJ IDEA.
@@ -44,12 +31,21 @@ public class WechatServiceImpl implements WechatService {
     @Override
     public String getLoginQCode() {
         String accessToken = accessTokenService.getAccessToken();
+        //随机生成一个 scene_str 参数
         String scene_str = "perFei." + System.currentTimeMillis();
 
-        String getTicketUrl = "https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=" + accessToken+ "";
-        // 临时整形参数值
-        String ticketParam = "{\"expire_seconds\": 120, \"action_name\": \"QR_SCENE\", \"action_info\": {\"scene\": {\"scene_str\": \"" + scene_str + "\"}}}";
-        String ticketStr = doPost(getTicketUrl,ticketParam);
+        String ticketUrl = String.format("https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s",accessToken);
+
+        /*
+            参数说明
+                expire_seconds	该二维码有效时间，以秒为单位。 最大不超过2592000（即30天），此字段如果不填，则默认有效期为30秒。
+                action_name	二维码类型，QR_SCENE 为临时的整型参数值，QR_STR_SCENE 为临时的字符串参数值，QR_LIMIT_SCENE 为永久的整型参数值，QR_LIMIT_STR_SCENE 为永久的字符串参数值
+                action_info	二维码详细信息
+                scene_id	场景值ID，临时二维码时为32位非0整型，永久二维码时最大值为100000（目前参数只支持1--100000）
+                scene_str	场景值ID（字符串形式的ID），字符串类型，长度限制为1到64
+         */
+        String ticketParam = "{\"expire_seconds\": 3000, \"action_name\": \"QR_STR_SCENE\", \"action_info\": {\"scene\": {\"scene_str\": \"" + scene_str + "\"}}}";
+        String ticketStr = doPost(ticketUrl,ticketParam);
         System.out.println(ticketStr);
         @SuppressWarnings({"all"})
         Map<String, String> ticketMap = GsonUtil.fromJson(ticketStr, Map.class);
@@ -58,25 +54,5 @@ public class WechatServiceImpl implements WechatService {
         return "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=" + ticket;
     }
 
-    public static String doPost(String url, String jsonData) {
-        return doPost(url, jsonData, StandardCharsets.UTF_8);
-    }
-    public static String doPost(String url, String jsonData, Charset charset) {
-        HttpPost httpPost = new HttpPost(url);
-        StringEntity stringEntity = new StringEntity(jsonData, "utf-8");
-        stringEntity.setContentEncoding("UTF-8");
-        stringEntity.setContentType("application/json");
-        httpPost.setEntity(stringEntity);
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-        try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
-            HttpEntity entity = response.getEntity();
-            String r = EntityUtils.toString(entity, charset);
-            log.info("result: {}", r);
-            return r;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
 }
