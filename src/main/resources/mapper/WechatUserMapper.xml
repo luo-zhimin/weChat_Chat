@@ -131,4 +131,8 @@
     where open_id=#{openId}
   </update>
 
+  <select id="hasUserInfoByOpenId" resultType="boolean">
+    select count(*) from wechat_user where is_del = 0 and user_info is null and open_id=#{openId}
+  </select>
+
 </mapper>

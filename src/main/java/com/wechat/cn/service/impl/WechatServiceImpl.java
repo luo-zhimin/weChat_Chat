@@ -1,11 +1,13 @@
 package com.wechat.cn.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.wechat.cn.dao.UserMapper;
 import com.wechat.cn.dao.WechatUserMapper;
 import com.wechat.cn.entry.User;
 import com.wechat.cn.entry.WechatUser;
 import com.wechat.cn.exception.ServiceException;
+import com.wechat.cn.handler.MySocketHandler;
 import com.wechat.cn.response.Login;
 import com.wechat.cn.service.BaseService;
 import com.wechat.cn.service.WechatService;
@@ -138,6 +140,7 @@ public class WechatServiceImpl extends BaseService implements WechatService {
                     boolean live = wechatUserMapper.hasLiveByOpenId(openId);
                     if (live) {
                         map.put("alert", "登录成功");
+//                        MySocketHandler.sendTopic("用户登录成功");
                     } else {
                         //创建用户
                         User user = User.builder()
@@ -157,18 +160,27 @@ public class WechatServiceImpl extends BaseService implements WechatService {
                                 .build();
                         this.wechatUserMapper.insertSelective(wechatUser);
                         map.put("alert", "绑定成功");
-//                        map.put("alert", "账号未绑定");
                     }
                 }
+
+                //调取ws 发送信息 通知前端登陆成功
+                wxScanLogin(event);
             }
 
             if (StringUtils.isNotEmpty(openId)){
-                //获取公众号的用户信息
-                String weChatUserInfo = this.accessTokenService.getWeChatUserInfo(openId);
-                JSONObject jsonObject = JSONObject.parseObject(weChatUserInfo);
-                logger.info("保存用户个人信息 [{}]",jsonObject);
-                this.wechatUserMapper.updateUserInfoByOpenId(openId,jsonObject.get("unionid")+"",weChatUserInfo);
+                //有则不更新
+                boolean hasUserInfo = wechatUserMapper.hasUserInfoByOpenId(openId);
+                if (hasUserInfo) {
+                    //获取公众号的用户信息
+                    String weChatUserInfo = this.accessTokenService.getWeChatUserInfo(openId);
+                    JSONObject jsonObject = JSONObject.parseObject(weChatUserInfo);
+//                    logger.info("保存用户个人信息 [{}]", jsonObject);
+                    this.wechatUserMapper.updateUserInfoByOpenId(openId, jsonObject.get("unionid") + "", weChatUserInfo);
+                }
             }
+
+
+
             //根据消息类型 构造返回消息
             result = MessageUtil.buildXml(map);
             if(result.equals("")){
@@ -200,7 +212,8 @@ public class WechatServiceImpl extends BaseService implements WechatService {
                 .token(createToken(openId))
                 .build();
 
-        logger.info("企业用户扫码登录成功");
+        logger.info("用户扫码登录成功");
+        MySocketHandler.sendTopic(JSON.toJSONString(build));
         return build;
     }
 }

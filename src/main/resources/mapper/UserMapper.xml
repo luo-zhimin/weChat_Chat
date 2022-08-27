@@ -150,5 +150,14 @@
             update_time = #{updateTime,jdbcType=TIMESTAMP}
         where id = #{id,jdbcType=BIGINT}
     </update>
-
+    
+    <select id="getUserInfoByUserName" resultMap="BaseResultMap">
+        select u.*
+        from wechat_user wu
+                 inner join user u on wu.relation_id = u.id
+        where wu.is_del = 0
+          and u.is_delete = 0
+          and wu.user_type = 0
+          and open_id=#{userName}
+    </select>
 </mapper>

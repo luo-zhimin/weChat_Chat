@@ -58,7 +58,7 @@ public class WechatAccessTokenService {
         log.info("【公众号】获取accessToken url:{}", url);
 
         String r = doGet(url);
-        log.info("【公众号】获取accessToken结果:{}", r);
+//        log.info("【公众号】获取accessToken结果:{}", r);
         JSONObject json = JSON.parseObject(r);
         this.accessToken = json.getString("access_token");
     }
@@ -68,7 +68,7 @@ public class WechatAccessTokenService {
                 this.getAccessToken(), openId);
         log.info("【公众号】获取关注的个人信息 url:{}", url);
         String result = doGet(url);
-        log.info("【公众号】获取关注的个人信息结果:{}", result);
+//        log.info("【公众号】获取关注的个人信息结果:{}", result);
         this.weChatUserInfo = result;
     }
 }
