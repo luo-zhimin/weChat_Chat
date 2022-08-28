@@ -29,8 +29,8 @@ public class MySocketHandler extends TextWebSocketHandler {
 
     /*
         afterConnectionEstablished 方法是在 socket 连接成功后被触发，同原生注解里的 @OnOpen 功能
-        afterConnectionClosed  **方法是在 socket 连接关闭后被触发，同原生注解里的 @OnClose 功能
-        handleTextMessage **方法是在客户端发送信息时触发，同原生注解里的 @OnMessage 功能
+        afterConnectionClosed 方法是在 socket 连接关闭后被触发，同原生注解里的 @OnClose 功能
+        handleTextMessage 方法是在客户端发送信息时触发，同原生注解里的 @OnMessage 功能
      */
 
 
@@ -238,19 +238,4 @@ public class MySocketHandler extends TextWebSocketHandler {
         }
         return true;
     }
-
-//    private void handleType(WebSocketSession session){
-//        if (session.getAttributes().get("type")!=null){
-//            String type = session.getAttributes().get("type")+"";
-//            if (StringUtils.isNotEmpty(type) && type.equals("No "+ Constant.Authorization)){
-//                //没有登陆放入sessionId
-//                if (status.equals("open")) {
-//                    sessionPools.put(session.getId(), session);
-//                }else if (status.equals("close")){
-//                    sessionPools.remove(session.getId());
-//                }
-//                return false;
-//            }
-//        }
-//    }
 }
