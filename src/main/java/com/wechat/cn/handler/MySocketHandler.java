@@ -1,11 +1,14 @@
 package com.wechat.cn.handler;
 
+import com.alibaba.fastjson.JSON;
 import com.wechat.cn.constant.Constant;
+import com.wechat.cn.response.ReceiveMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
@@ -64,11 +67,16 @@ public class MySocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
-        if (!checkLogin(session,null)){
-            return;
+//        if (!checkLogin(session,null)){
+//            log.info("需要登陆才可以发送信息");
+//            return;
+//        }
+        String userName = session.getAttributes().get("userName") + "";
+        if (StringUtils.isEmpty(userName)) {
+            userName = "default";
         }
         session.sendMessage(new TextMessage(String.format("收到用户：【%s】发来的【%s】",
-                session.getAttributes().get("userName"),
+                userName,
                 message.getPayload())));
     }
 
@@ -91,6 +99,7 @@ public class MySocketHandler extends TextWebSocketHandler {
         if (put == null) {
             addOnlineCount();
         }
+        //这块会实现自己业务，比如，当用户登录后，会把离线消息推送给用户
         session.sendMessage(new TextMessage("connection to ws succeeded! online number：" + onlineNumber));
     }
 
@@ -119,38 +128,96 @@ public class MySocketHandler extends TextWebSocketHandler {
     }
 
     /**
+     * 消息处理
+     * @param session session
+     * @param message 消息
+     * @throws Exception 异常
+     */
+    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+        log.info("accept handle message");
+        String receiveMessage = message.getPayload() + "";
+        //登陆之后发送
+        String userName = session.getAttributes().get("userName") + "";
+        //解析内容...
+        ReceiveMessage userMessage = JSON.parseObject(receiveMessage, ReceiveMessage.class);
+        String msg = userMessage.getMessage();
+        String type = userMessage.getType();
+        log.info("accept message[{}]",userMessage);
+        //...
+    }
+
+    /**
+     * 用户连接错误
+     * @param session 会话session
+     * @param exception 异常
+     */
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        log.error("服务端发生了错误: "+exception.getMessage());
+        closeConnection(session);
+    }
+
+    /**
+     * socket 连接执行
+     */
+    @Override
+    public boolean supportsPartialMessages() {
+        log.debug("Method for supportsPartialMessages");
+        return super.supportsPartialMessages();
+    }
+
+    private void closeConnection(WebSocketSession webSocketSession) {
+        String sessionId = webSocketSession.getId();
+
+        checkLogin(webSocketSession,"close");
+        log.info("有连接关闭！ sessionId：{}，", sessionId);
+        log.info("在线人数{}",onlineNumber);
+    }
+
+
+    /**
      * 发送广播消息
      * @param message 消息内容
+     * @return 是否成功发送
      */
-    public static void sendTopic(String message) {
+    public static Boolean sendTopic(String message) {
         log.info("sendTopic message[{}],sessionPools[{}]",message,sessionPools.size());
         if (sessionPools.isEmpty()) {
-            return;
+            return false;
         }
         for (Map.Entry<String, WebSocketSession> entry : sessionPools.entrySet()) {
             try {
+                //是否给在线发送或者全部
+//                if (entry.getValue().isOpen()){
+//                    entry.getValue().sendMessage(new TextMessage(message));
+//                    return true;
+//                }
                 entry.getValue().sendMessage(new TextMessage(message));
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+        return true;
     }
 
     /**
      * 点对点发送消息
      * @param userName     用户
      * @param message 消息
+     * @return 是否成功发送
      */
-    public static void sendToUser(String userName, String message) {
+    public static Boolean sendToUser(String userName, String message) {
         WebSocketSession socketSession = sessionPools.get(userName);
         if (socketSession == null) {
-            return;
+            //离线处理......待处理
+            return false;
         }
         try {
             socketSession.sendMessage(new TextMessage(message));
         } catch (IOException e) {
             log.error("send to user:{}, error! data:{}", userName, message);
         }
+        return true;
     }
 
     private Boolean checkLogin(WebSocketSession session,String status){
@@ -171,4 +238,19 @@ public class MySocketHandler extends TextWebSocketHandler {
         }
         return true;
     }
+
+//    private void handleType(WebSocketSession session){
+//        if (session.getAttributes().get("type")!=null){
+//            String type = session.getAttributes().get("type")+"";
+//            if (StringUtils.isNotEmpty(type) && type.equals("No "+ Constant.Authorization)){
+//                //没有登陆放入sessionId
+//                if (status.equals("open")) {
+//                    sessionPools.put(session.getId(), session);
+//                }else if (status.equals("close")){
+//                    sessionPools.remove(session.getId());
+//                }
+//                return false;
+//            }
+//        }
+//    }
 }

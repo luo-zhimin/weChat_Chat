@@ -179,8 +179,6 @@ public class WechatServiceImpl extends BaseService implements WechatService {
                 }
             }
 
-
-
             //根据消息类型 构造返回消息
             result = MessageUtil.buildXml(map);
             if(result.equals("")){

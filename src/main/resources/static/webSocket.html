@@ -6,6 +6,20 @@
 </head>
 <script src="websocket.js"></script>
 <body>
-
+    <button onclick="send(sendMessage)">发送信息</button>
+    <button onclick="closeWebSocket()">关闭连接</button>
 </body>
+<script>
+    //发送信息
+    // socketSend("socket发送信息")
+    //封装对象
+    let sendMessage ={
+        type:"send",
+        message:"socket发送消息"
+    }
+
+    function send(message){
+        socketSend(message);
+    }
+</script>
 </html>
